@@ -11,4 +11,6 @@ struct Decoder
         = rows_per_frame * microseconds_per_row;
     static constexpr size_t nominal_samples_per_frame
         = microseconds_per_frame * samples_per_microsecond;
+
+    static constexpr size_t microseconds_phase_zero_from_vsync_rising_edge = 64;
 };
