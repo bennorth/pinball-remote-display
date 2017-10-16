@@ -230,6 +230,8 @@ std::vector<uint8_t> Decoder::frame_from_samples() const
 struct NoSignalSource {
     NoSignalSource(const char* fname);
 
+    void reset();
+
     std::vector<uint8_t> frames;
     size_t n_frames;
     size_t next_frame_idx;
@@ -255,4 +257,9 @@ NoSignalSource::NoSignalSource(const char* fname)
 
     if (in_stream.gcount() != n_bytes)
         throw std::runtime_error("second read didn't read expected n.bytes");
+
+    reset();
 }
+
+void NoSignalSource::reset()
+{ next_frame_idx = 0; }
