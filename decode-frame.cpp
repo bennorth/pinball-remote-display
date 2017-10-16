@@ -221,3 +221,12 @@ std::vector<uint8_t> Decoder::frame_from_samples() const
 
     return pixels;
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+struct NoSignalSource {
+    std::vector<uint8_t> frames;
+    size_t n_frames;
+    size_t next_frame_idx;
+};
