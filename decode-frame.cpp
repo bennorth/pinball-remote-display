@@ -1,6 +1,10 @@
+#include <stdio.h>
+
 #include <cstddef>
 #include <cstdint>
+#include <sstream>
 #include <vector>
+#include <stdexcept>
 
 struct Decoder
 {
@@ -23,6 +27,8 @@ struct Decoder
     Decoder() : sample_buffer(buffer_size)
         {}
 
+    void read_into_buffer(size_t n_bytes);
+
     ////////////////////////////////////////////////////////////////////////////////////////
 
     // TODO: This could be made more self-contained.  Currently each user of the
@@ -32,3 +38,16 @@ struct Decoder
     //
     std::vector<uint8_t> sample_buffer;
 };
+
+
+void Decoder::read_into_buffer(size_t n_bytes)
+{
+    size_t n_read = fread(sample_buffer.data(), 1, n_bytes, stdin);
+    if (n_read != n_bytes)
+    {
+        std::ostringstream oss;
+        oss << "short read; requested " << n_bytes
+            << " but got " << n_read;
+        throw std::runtime_error(oss.str());
+    }
+}
