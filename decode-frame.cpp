@@ -30,6 +30,7 @@ struct Decoder
         {}
 
     void read_into_buffer(size_t n_bytes);
+    size_t samples_from_microseconds(size_t us) const;
     std::vector<size_t> detect_rising_edges(size_t data_length) const;
     std::vector<size_t> detect_falling_edges(size_t data_length) const;
 
@@ -101,4 +102,9 @@ std::vector<size_t> Decoder::detect_falling_edges(size_t data_length) const
     }
 
     return falling_edge_idxs;
+}
+
+size_t Decoder::samples_from_microseconds(size_t us) const
+{
+    return us * estimated_frame_period / microseconds_per_frame;
 }
