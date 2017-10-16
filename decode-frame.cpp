@@ -7,6 +7,7 @@
 #include <vector>
 #include <stdexcept>
 #include <limits>
+#include <algorithm>
 
 #include "channels.h"
 
@@ -230,6 +231,7 @@ std::vector<uint8_t> Decoder::frame_from_samples() const
 struct NoSignalSource {
     NoSignalSource(const char* fname);
 
+    void next_frame_into(std::vector<uint8_t>& frame_out);
     void reset();
 
     std::vector<uint8_t> frames;
@@ -259,6 +261,20 @@ NoSignalSource::NoSignalSource(const char* fname)
         throw std::runtime_error("second read didn't read expected n.bytes");
 
     reset();
+}
+
+void NoSignalSource::next_frame_into(std::vector<uint8_t>& frame_out)
+{
+    size_t pixel_idx_0 = next_frame_idx * Decoder::pixels_per_frame;
+
+    frame_out.clear();
+    frame_out.reserve(Decoder::pixels_per_frame);
+    std::copy_n(frames.begin() + pixel_idx_0, Decoder::pixels_per_frame,
+                std::back_inserter(frame_out));
+
+    ++next_frame_idx;
+    if (next_frame_idx == n_frames)
+        next_frame_idx = 0;
 }
 
 void NoSignalSource::reset()
