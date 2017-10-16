@@ -27,7 +27,7 @@ struct Decoder
         = 2 * nominal_samples_per_frame + nominal_samples_per_frame / 4;
 
     Decoder() : sample_buffer(buffer_size)
-        {}
+    { cold_start(); }
 
     void read_into_buffer(size_t n_bytes);
     void cold_start();
