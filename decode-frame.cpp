@@ -41,6 +41,25 @@ struct Decoder
     // remembered how many samples it contained.
     //
     std::vector<uint8_t> sample_buffer;
+
+    // How many logic analyzer samples we think currently make up one display
+    // frame.  Because the pinball machine clock and the logic analyzer clock
+    // are not locked, this can wander with respect to the nominal value.
+    //
+    size_t estimated_frame_period = nominal_samples_per_frame;
+
+    // Define the start of a frame as being half-way through the 128us clock-low
+    // stretch preceding the first row of that frame.  This happens 64us after
+    // the rising edge of the ROW_DATA / vsync pulse.  We always attempt to read
+    // samples up to that point.  The 'estimated frame phase' is how many
+    // samples past the nominal frame start we think we most recently read.
+    //
+    ssize_t estimated_frame_phase = 0;
+
+    // Whether we think we're successfully locked onto a cycle of reading a
+    // frame of samples and decoding it.
+    //
+    bool locked = false;
 };
 
 
