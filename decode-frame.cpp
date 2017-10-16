@@ -6,6 +6,8 @@
 #include <vector>
 #include <stdexcept>
 
+#include "channels.h"
+
 struct Decoder
 {
     static constexpr size_t pixels_per_row = 128;
@@ -28,6 +30,8 @@ struct Decoder
         {}
 
     void read_into_buffer(size_t n_bytes);
+    std::vector<size_t> detect_rising_edges(size_t data_length) const;
+    std::vector<size_t> detect_falling_edges(size_t data_length) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -50,4 +54,32 @@ void Decoder::read_into_buffer(size_t n_bytes)
             << " but got " << n_read;
         throw std::runtime_error(oss.str());
     }
+}
+
+std::vector<size_t> Decoder::detect_rising_edges(size_t data_length) const
+{
+    std::vector<size_t> rising_edge_idxs;
+
+    for (size_t i = 1; i != data_length; ++i) {
+        bool this_1 = channels::test_vsync(sample_buffer[i]);
+        bool prev_0 = ( ! channels::test_vsync(sample_buffer[i - 1]));
+        if (prev_0 && this_1)
+            rising_edge_idxs.push_back(i);
+    }
+
+    return rising_edge_idxs;
+}
+
+std::vector<size_t> Decoder::detect_falling_edges(size_t data_length) const
+{
+    std::vector<size_t> falling_edge_idxs;
+
+    for (size_t i = 1; i != data_length; ++i) {
+        bool this_0 = ( ! channels::test_vsync(sample_buffer[i]));
+        bool prev_1 = channels::test_vsync(sample_buffer[i - 1]);
+        if (this_0 && prev_1)
+            falling_edge_idxs.push_back(i);
+    }
+
+    return falling_edge_idxs;
 }
