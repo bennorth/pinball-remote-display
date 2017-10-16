@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -279,3 +280,86 @@ void NoSignalSource::next_frame_into(std::vector<uint8_t>& frame_out)
 
 void NoSignalSource::reset()
 { next_frame_idx = 0; }
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+int main(int c, char **v)
+{
+    Decoder decoder {};
+    NoSignalSource no_signal_source {v[1]};
+
+    std::vector<uint8_t> macro_frame(Decoder::pixels_per_frame);
+
+    size_t sub_frame_phase = 0;
+    size_t n_locked_subframes = 0;
+    while (true) {
+        // We sum six 'input-frames' into one 'macro-frame'.  Have we
+        // accumulated enough in-frames to make a macro-frame yet?
+        if (sub_frame_phase == 6)
+        {
+            if (n_locked_subframes == 0)
+            {
+                // Replace macro_frame with next no-signal frame.
+                no_signal_source.next_frame_into(macro_frame);
+            }
+
+            std::cout.write(reinterpret_cast<const char *>(macro_frame.data()),
+                            macro_frame.size());
+
+            if (n_locked_subframes == 0)
+            {
+                decoder.cold_start();  // Consumes 2.25 nominal frames of samples.
+                if (decoder.locked)
+                {
+                    // We did achieve lock, but for this macro-frame we'll just
+                    // throw away enough samples to keep our timing straight.
+
+                    // Read/discard three frames so we're about at six in-frames
+                    // read in total.
+                    for (size_t i = 0; i != 3; ++i)
+                        decoder.read_frame_and_adjust_estimates();
+
+                    // Prepare for next time we lose lock.
+                    no_signal_source.reset();
+                }
+                else
+                {
+                    // We did not manage to achieve lock.  For this macro-frame
+                    // we'll just read our best guess of six frames of samples
+                    // to keep the output timing as good as we can manage.
+
+                    // Read and discard 0.75 of a nominal frame to get up to
+                    // three whole nominal frames read.
+                    decoder.read_into_buffer(3 * Decoder::nominal_samples_per_frame / 4);
+
+                    // Read/discard three more nominal frames, to get six
+                    // nominal frames' worth of samples read.
+                    for (size_t i = 0; i != 3; ++i)
+                        decoder.read_frame_and_adjust_estimates();
+                }
+
+                // Replace macro_frame with next no-signal frame and emit it.
+                no_signal_source.next_frame_into(macro_frame);
+                std::cout.write(reinterpret_cast<const char *>(macro_frame.data()),
+                                macro_frame.size());
+            }
+
+            sub_frame_phase = 0;
+            n_locked_subframes = 0;
+            std::fill(macro_frame.begin(), macro_frame.end(), 0);
+        }
+
+        decoder.read_frame_and_adjust_estimates();
+        auto pixels = decoder.frame_from_samples();
+        if (decoder.locked)
+            ++n_locked_subframes;
+
+        for (size_t i = 0; i != Decoder::pixels_per_frame; ++i)
+            macro_frame[i] += pixels[i];
+
+        sub_frame_phase += 1;
+    }
+
+    return 0;
+}
