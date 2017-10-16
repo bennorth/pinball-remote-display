@@ -35,6 +35,8 @@ struct Decoder
     std::vector<size_t> detect_rising_edges(size_t data_length) const;
     std::vector<size_t> detect_falling_edges(size_t data_length) const;
 
+    void read_frame_and_adjust_estimates();
+
     ////////////////////////////////////////////////////////////////////////////////////////
 
     // TODO: This could be made more self-contained.  Currently each user of the
@@ -136,4 +138,34 @@ void Decoder::cold_start()
     estimated_frame_phase = 0;
 
     locked = true;
+}
+
+void Decoder::read_frame_and_adjust_estimates()
+{
+    auto n_samples_to_next_zero_phase = estimated_frame_period - estimated_frame_phase;
+    read_into_buffer(n_samples_to_next_zero_phase);
+    auto rising_edge_idxs = detect_rising_edges(n_samples_to_next_zero_phase);
+    auto falling_edge_idxs = detect_falling_edges(n_samples_to_next_zero_phase);
+
+    if ((not locked)
+        || (rising_edge_idxs.size() != 1)
+        || (falling_edge_idxs.size() != 1))
+    {
+        locked = false;
+        // Leave estimated_frame_period alone.
+        estimated_frame_phase = 0;
+    }
+    else
+    {
+        auto rising_edge_idx = rising_edge_idxs[0];
+        auto falling_edge_idx = falling_edge_idxs[0];
+        auto n_samples_low = rising_edge_idx - falling_edge_idx;
+        estimated_frame_period = n_samples_low * 32 / 31;
+
+        estimated_frame_phase
+            = (n_samples_to_next_zero_phase
+               - (rising_edge_idx
+                  + samples_from_microseconds(
+                      microseconds_phase_zero_from_vsync_rising_edge)));
+    }
 }
