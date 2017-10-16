@@ -33,6 +33,11 @@ struct channels {
     // reliable in practice.
     //
     static constexpr uint8_t data = 8;
+
+    static bool test_hsync(uint8_t x) { return !!(x & hsync); }
+    static bool test_vsync(uint8_t x) { return !!(x & vsync); }
+    static bool test_clk(uint8_t x) { return !!(x & clk); }
+    static bool test_data(uint8_t x) { return !!(x & data); }
 };
 
 #endif  // CHANNELS_H_
