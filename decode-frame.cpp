@@ -36,6 +36,7 @@ struct Decoder
     std::vector<size_t> detect_falling_edges(size_t data_length) const;
 
     void read_frame_and_adjust_estimates();
+    std::vector<uint8_t> frame_from_samples() const;
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -168,4 +169,55 @@ void Decoder::read_frame_and_adjust_estimates()
                   + samples_from_microseconds(
                       microseconds_phase_zero_from_vsync_rising_edge)));
     }
+}
+
+std::vector<uint8_t> Decoder::frame_from_samples() const
+{
+    std::vector<uint8_t> pixels;
+    pixels.reserve(pixels_per_row * rows_per_frame);
+
+    if (not locked)
+    {
+        pixels.insert(pixels.end(), pixels_per_frame, 0);
+        return pixels;
+    }
+
+    bool prev_clk = channels::test_clk(sample_buffer[0]);
+    bool prev_hsync = channels::test_hsync(sample_buffer[0]);
+    size_t n_pixels_this_row = 0;
+    size_t n_rows_this_frame = 0;
+    for (size_t i = 1; i != estimated_frame_period; ++i) {
+        uint8_t sample = sample_buffer[i];
+        bool this_clk = channels::test_clk(sample);
+        bool this_hsync = channels::test_hsync(sample);
+
+        if (this_clk && (not prev_clk))
+        {
+            if (n_pixels_this_row < pixels_per_row
+                && n_rows_this_frame < rows_per_frame)
+            {
+                // 42 is best approximation to 255 / 6.
+                pixels.push_back(channels::test_data(sample) ? 42 : 0);
+                ++n_pixels_this_row;
+            }
+        }
+
+        if (this_hsync && (not prev_hsync))
+        {
+            size_t n_missing_pixels = pixels_per_row - n_pixels_this_row;
+            if (n_missing_pixels > 0)
+                pixels.insert(pixels.end(), n_missing_pixels, 0);
+
+            n_pixels_this_row = 0;
+            ++n_rows_this_frame;
+        }
+
+        prev_clk = this_clk;
+        prev_hsync = this_hsync;
+    }
+
+    size_t n_missing_pixels = pixels_per_frame - pixels.size();
+    pixels.insert(pixels.end(), n_missing_pixels, 0);
+
+    return pixels;
 }
