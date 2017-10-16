@@ -2,9 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <sstream>
 #include <vector>
 #include <stdexcept>
+#include <limits>
 
 #include "channels.h"
 
@@ -226,7 +228,31 @@ std::vector<uint8_t> Decoder::frame_from_samples() const
 ////////////////////////////////////////////////////////////////////////////////////////
 
 struct NoSignalSource {
+    NoSignalSource(const char* fname);
+
     std::vector<uint8_t> frames;
     size_t n_frames;
     size_t next_frame_idx;
 };
+
+NoSignalSource::NoSignalSource(const char* fname)
+{
+    std::ifstream in_stream {fname, (std::ios::in | std::ios::binary)};
+    if (not in_stream)
+        throw std::runtime_error("failed to open source file");
+
+    in_stream.ignore(std::numeric_limits<std::streamsize>::max());
+    auto n_bytes = in_stream.gcount();
+    in_stream.clear();
+    in_stream.seekg(0, std::ios_base::beg);
+
+    if (n_bytes % Decoder::pixels_per_frame != 0)
+        throw std::runtime_error("non-integral number of frames");
+
+    n_frames = n_bytes / Decoder::pixels_per_frame;
+    frames.resize(n_bytes);
+    in_stream.read(reinterpret_cast<char*>(frames.data()), n_bytes);
+
+    if (in_stream.gcount() != n_bytes)
+        throw std::runtime_error("second read didn't read expected n.bytes");
+}
