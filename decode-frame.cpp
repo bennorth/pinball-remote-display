@@ -30,6 +30,7 @@ struct Decoder
         {}
 
     void read_into_buffer(size_t n_bytes);
+    void cold_start();
     size_t samples_from_microseconds(size_t us) const;
     std::vector<size_t> detect_rising_edges(size_t data_length) const;
     std::vector<size_t> detect_falling_edges(size_t data_length) const;
@@ -107,4 +108,32 @@ std::vector<size_t> Decoder::detect_falling_edges(size_t data_length) const
 size_t Decoder::samples_from_microseconds(size_t us) const
 {
     return us * estimated_frame_period / microseconds_per_frame;
+}
+
+void Decoder::cold_start()
+{
+    read_into_buffer(buffer_size);
+    auto rising_edge_idxs = detect_rising_edges(buffer_size);
+
+    auto n_edges = rising_edge_idxs.size();
+    if (n_edges < 2)
+    {
+        locked = false;
+        return;
+    }
+
+    estimated_frame_period = (rising_edge_idxs[n_edges - 1]
+                              - rising_edge_idxs[n_edges - 2]);
+
+    estimated_frame_phase
+        = (buffer_size - (rising_edge_idxs[n_edges - 1]
+                          + samples_from_microseconds(
+                              microseconds_phase_zero_from_vsync_rising_edge)));
+
+    // Read and throw away the remainder of this frame, bringing us to the
+    // phase-zero point.
+    read_into_buffer(estimated_frame_period - estimated_frame_phase);
+    estimated_frame_phase = 0;
+
+    locked = true;
 }
