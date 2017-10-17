@@ -1,0 +1,43 @@
+Pinball Remote Display
+Ben North <ben@redfrontdoor.org>
+October 2017
+
+
+The code contained in the files
+
+    channels.h
+    decode-frame.cpp
+    expand-into-dots.cpp
+
+is hereby made available under the terms of the GNU General Public
+License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version.
+
+
+The text file
+
+    LICENCE.txt
+
+contains a copy of the GPLv3 License, whose copyright is held by the
+Free Software Foundation, and which itself is freely distributable in
+unmodified form as here.
+
+
+The raw video file
+
+    raw-twinkles.bin
+
+is derived from frames displayed by the Twilight Zone pinball machine,
+and I believe is a fair use of material whose copyright is held by
+Midway/Bally.
+
+
+The following scripts, text files, and build files:
+
+    CMakeLists.txt
+    receive.sh
+    transmit.sh
+    README.md
+    COPYING (this file)
+
+are hereby placed into the public domain.
